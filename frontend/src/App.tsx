@@ -1,9 +1,8 @@
-﻿import { useEffect, useMemo, useState } from 'react';
-import { askOperationalCopilot } from './application/copilot';
+import { useEffect, useMemo, useState } from 'react';
 import { buildExecutivePanel, calculateImpact } from './application/decision';
 import { buildMissionsByScenario } from './application/missions';
 import type { ComplianceData, DashboardData, MissionPlan, RoadSegment, ScenarioMode, WeeklyPlanData } from './domain/types';
-import { downloadReport, generateWeeklyPlan, getCompliance, getDashboard, getMissions, getSegments } from './infrastructure/api/segments.api';
+import { askCopilot, clearToken, downloadReport, generateWeeklyPlan, getCompliance, getDashboard, getMissions, getSegments, hasToken, login } from './infrastructure/api/segments.api';
 import { CompliancePanel } from './ui/modules/dashboard/CompliancePanel';
 import { ExecutivePanel } from './ui/modules/dashboard/ExecutivePanel';
 import { ScenarioSimulator } from './ui/modules/dashboard/ScenarioSimulator';
@@ -35,6 +34,9 @@ function App() {
   const [activeSection, setActiveSection] = useState<SectionId>('executivo');
   const [selectedTrechoId, setSelectedTrechoId] = useState<number | null>(null);
   const [generatingPlan, setGeneratingPlan] = useState(false);
+  const [email, setEmail] = useState('admin@motiva-orion.local');
+  const [password, setPassword] = useState('orion.admin.123');
+  const [isAuthenticated, setIsAuthenticated] = useState(hasToken());
 
   const loadData = async () => {
     const [segmentsData, missionsData, dashboardData, complianceData] = await Promise.all([
@@ -56,10 +58,15 @@ function App() {
   };
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
+
     loadData()
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -109,6 +116,46 @@ function App() {
     }
   };
 
+  const onLogin = async () => {
+    try {
+      setError(null);
+      setLoading(true);
+      await login(email, password);
+      setIsAuthenticated(true);
+    } catch (err) {
+      setError((err as Error).message);
+      setLoading(false);
+    }
+  };
+
+  const onLogout = () => {
+    clearToken();
+    setIsAuthenticated(false);
+    setSegments([]);
+    setMissions([]);
+    setDashboard(null);
+    setCompliance(null);
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <main className="mx-auto flex min-h-screen max-w-md items-center px-4">
+        <section className="w-full rounded-2xl border border-slate-700 bg-slate-900/90 p-5 shadow-panel">
+          <h1 className="text-xl font-semibold text-white">Acesso ORION</h1>
+          <p className="mt-2 text-sm text-slate-300">Entre com credenciais corporativas para acessar o centro de decisao.</p>
+          <div className="mt-4 space-y-3">
+            <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white" />
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white" />
+            <button type="button" onClick={() => void onLogin()} className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500">
+              Entrar
+            </button>
+            {error && <p className="text-sm text-critical">{error}</p>}
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto min-h-screen max-w-[1450px] px-3 pb-24 pt-3 sm:px-4 md:px-6 md:pb-10 md:pt-5">
       <header className="rounded-2xl border border-slate-700 bg-slate-900/90 p-4 shadow-panel sm:p-5">
@@ -129,6 +176,9 @@ function App() {
               Plano: {weeklyPlan.total_missoes} missoes | Custo R$ {weeklyPlan.custo_total_estimado.toLocaleString('pt-BR')}
             </span>
           )}
+          <button type="button" onClick={onLogout} className="rounded-lg border border-slate-600 px-3 py-2 text-xs text-slate-200">
+            Sair
+          </button>
         </div>
       </header>
 
@@ -202,7 +252,7 @@ function App() {
             </div>
             <div className="grid gap-4 xl:grid-cols-2">
               <MissionPlanning missions={missions} />
-              <CopilotPanel onAsk={(q) => askOperationalCopilot(q, segments, missions)} onDownloadReport={downloadReport} />
+              <CopilotPanel onAsk={async (q) => (await askCopilot(q)).resposta} onDownloadReport={downloadReport} />
             </div>
           </section>
         </div>

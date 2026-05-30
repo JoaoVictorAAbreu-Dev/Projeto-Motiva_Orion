@@ -95,6 +95,7 @@ class UsuarioModel(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     nome: Mapped[str] = mapped_column(String(128), nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    password_hash: Mapped[str | None] = mapped_column(String(255))
     perfil: Mapped[str] = mapped_column(String(32), default='operador')
     ativo: Mapped[bool] = mapped_column(Boolean, default=True)
 

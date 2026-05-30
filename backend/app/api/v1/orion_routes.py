@@ -9,10 +9,21 @@ from sqlalchemy.orm import Session
 from app.application.services.operational_bootstrap_service import OperationalBootstrapService
 from app.application.services.operational_plan_service import OperationalPlanService
 from app.application.services.report_service import build_report_pdf
+from app.application.services.ai_service import AIService
 from app.core.auth import Token, authenticate_user, create_access_token, get_current_user, require_roles
 from app.database.models import UsuarioModel
 from app.database.session import get_db
-from app.domain.schemas import ConformidadeRead, DashboardRead, IndicadorRead, MissaoRead, PlanoSemanalRead, TrechoRead
+from app.domain.schemas import (
+    ConformidadeRead,
+    CopilotAskRequest,
+    CopilotAskResponse,
+    DashboardRead,
+    IndicadorRead,
+    LoginRequest,
+    MissaoRead,
+    PlanoSemanalRead,
+    TrechoRead,
+)
 from app.repositories.core_repositories import IndicadorRepository, IntervencaoRepository, MissaoRepository, TrechoRepository
 
 router = APIRouter(prefix='/api/v1', tags=['orion'])
@@ -21,6 +32,15 @@ router = APIRouter(prefix='/api/v1', tags=['orion'])
 @router.post('/auth/login', response_model=Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)) -> Token:
     user = authenticate_user(db, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(status_code=401, detail='Usuario ou senha invalidos')
+    token = create_access_token(subject=user.email, perfil=user.perfil)
+    return Token(access_token=token, token_type='bearer')
+
+
+@router.post('/auth/login-json', response_model=Token)
+def login_json(payload: LoginRequest, db: Session = Depends(get_db)) -> Token:
+    user = authenticate_user(db, payload.email, payload.password)
     if not user:
         raise HTTPException(status_code=401, detail='Usuario ou senha invalidos')
     token = create_access_token(subject=user.email, perfil=user.perfil)
@@ -161,3 +181,28 @@ def report(tipo: str, db: Session = Depends(get_db), _: UsuarioModel = Depends(g
         media_type='application/pdf',
         headers={'Content-Disposition': f'attachment; filename=relatorio_{tipo_normalizado}.pdf'}
     )
+
+
+@router.post('/copilot/perguntar', response_model=CopilotAskResponse)
+async def ask_copilot(
+    payload: CopilotAskRequest,
+    db: Session = Depends(get_db),
+    _: UsuarioModel = Depends(require_roles('admin', 'gestor', 'coordenador', 'operador'))
+) -> CopilotAskResponse:
+    trechos = TrechoRepository(db).list()
+    missoes = MissaoRepository(db).list()
+    criticos = [t for t in trechos if t.classificacao == 'Critico']
+    custo_total = float(sum(m.custo_estimado for m in missoes))
+    dashboard = {
+        'total_trechos': len(trechos),
+        'trechos_criticos': len(criticos),
+        'missoes_planejadas': len(missoes),
+        'indice_medio_risco': round(sum(t.iro for t in trechos) / max(1, len(trechos)), 1),
+    }
+    context = {
+        'dashboard': dashboard,
+        'missoes': {'custo_total': custo_total},
+        'top_trechos': [{'id': t.id, 'iro': t.iro, 'classificacao': t.classificacao} for t in trechos[:10]],
+    }
+    resposta = await AIService().explain(payload.pergunta, context)
+    return CopilotAskResponse(resposta=resposta)

@@ -1,15 +1,24 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 
 interface Props {
-  onAsk: (question: string) => string;
+  onAsk: (question: string) => Promise<string>;
   onDownloadReport: (type: 'operacional' | 'executivo' | 'conformidade') => Promise<void>;
 }
 
 export function CopilotPanel({ onAsk, onDownloadReport }: Props) {
   const [question, setQuestion] = useState('Quais trechos devo atacar primeiro?');
   const [answer, setAnswer] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const submit = () => setAnswer(onAsk(question));
+  const submit = async () => {
+    try {
+      setLoading(true);
+      const text = await onAsk(question);
+      setAnswer(text);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <section className="rounded-xl border border-slate-700 bg-slate-900/80 p-4 shadow-panel">
@@ -24,10 +33,11 @@ export function CopilotPanel({ onAsk, onDownloadReport }: Props) {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={submit}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
+            onClick={() => void submit()}
+            disabled={loading}
+            className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-60"
           >
-            Gerar Decisao
+            {loading ? 'Gerando...' : 'Gerar Decisao'}
           </button>
           <button type="button" onClick={() => void onDownloadReport('operacional')} className="rounded-md border border-slate-600 px-3 py-2 text-xs text-slate-200">Relatorio Operacional</button>
           <button type="button" onClick={() => void onDownloadReport('executivo')} className="rounded-md border border-slate-600 px-3 py-2 text-xs text-slate-200">Relatorio Executivo</button>

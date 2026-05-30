@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS trechos (
     tipo_area VARCHAR(64) NOT NULL DEFAULT 'faixa_dominio',
     nivel_rocada DOUBLE PRECISION NOT NULL DEFAULT 0,
     data_referencia DATE,
+    status VARCHAR(16) NOT NULL DEFAULT 'ativo',
     latitude DOUBLE PRECISION NOT NULL,
     longitude DOUBLE PRECISION NOT NULL,
     geom geometry(LINESTRING, 4326),
@@ -58,6 +59,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(128) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255),
     perfil VARCHAR(32) NOT NULL DEFAULT 'operador',
     ativo BOOLEAN NOT NULL DEFAULT TRUE
 );

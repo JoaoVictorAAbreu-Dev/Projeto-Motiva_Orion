@@ -1,4 +1,4 @@
-﻿# Motiva ORION
+# Motiva ORION
 
 ## Visao Geral
 Motiva ORION (Operational Roadside Intelligence & Optimization Network) e uma plataforma de inteligencia operacional para gestao preditiva de vegetacao rodoviaria.
@@ -68,8 +68,6 @@ backend/
     exports/
   database/
     migrations/
-  domains/
-  services/
   repositories/
   scripts/
 frontend/
@@ -116,14 +114,20 @@ frontend/
   - economia logistica
 - Gerador de Plano Semanal com recomendacoes executivas.
 
-### 4. Conformidade e Relatorios
+### 4. Governanca e Seguranca
+- Autenticacao JWT.
+- Controle de acesso por perfil (`admin`, `gestor`, `coordenador`, `operador`).
+- Login para frontend via endpoint JSON.
+- Seed com usuarios padrao e senha com hash bcrypt.
+
+### 5. Conformidade e Relatorios
 - Painel de conformidade contratual.
 - Relatorios PDF:
   - operacional
   - executivo
   - conformidade
 
-### 5. Centro de Operacoes (Frontend)
+### 6. Centro de Operacoes (Frontend)
 - Painel executivo de decisao.
 - Simulador de cenarios.
 - Mapa operacional com status por criticidade.
@@ -135,7 +139,11 @@ frontend/
 Base: `http://127.0.0.1:8000`
 
 - `GET /health`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/login-json`
+- `GET /api/v1/auth/me`
 - `POST /api/v1/bootstrap`
+- `POST /api/v1/imports/gestao-verde`
 - `GET /api/v1/trechos`
 - `GET /api/v1/trechos/criticos`
 - `GET /api/v1/trechos/{id}`
@@ -144,9 +152,8 @@ Base: `http://127.0.0.1:8000`
 - `POST /api/v1/plano-semanal/gerar`
 - `GET /api/v1/conformidade`
 - `GET /api/v1/dashboard`
-- `GET /api/v1/relatorios/operacional`
-- `GET /api/v1/relatorios/executivo`
-- `GET /api/v1/relatorios/conformidade`
+- `POST /api/v1/copilot/perguntar`
+- `GET /api/v1/relatorios/{tipo}`
 
 ## Regra de Governanca de IA
 A IA nao calcula:
@@ -168,6 +175,8 @@ cd backend
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
+.venv\Scripts\python.exe scripts\run_sql_migrations.py
+.venv\Scripts\python.exe scripts\seed_db.py
 uvicorn app.main:app --reload
 ```
 
@@ -178,25 +187,22 @@ npm install
 npm run dev
 ```
 
-## Banco e Seeds
-### Criar esquema
-```bash
-cd backend
-.venv\Scripts\python.exe scripts\init_db.py
-```
-
-### Seed inicial
-```bash
-cd backend
-.venv\Scripts\python.exe scripts\seed_db.py
-```
+## Credenciais Seed
+- `admin@motiva-orion.local` / `orion.admin.123`
+- `gestor@motiva-orion.local` / `orion.gestor.123`
+- `operador@motiva-orion.local` / `orion.operador.123`
 
 ## Fluxo Recomendado de Uso
 1. Colocar arquivos em `backend/data/raw`.
 2. Executar `POST /api/v1/bootstrap`.
 3. Consultar `GET /api/v1/dashboard` e `GET /api/v1/conformidade`.
 4. Gerar plano semanal em `POST /api/v1/plano-semanal/gerar`.
-5. Exportar relatarios PDF para stakeholders.
+5. Usar `POST /api/v1/copilot/perguntar` para explicacoes executivas.
+6. Exportar relatorios PDF para stakeholders.
+
+## Execucao por Sprints
+- Plano macro: `docs/sprints/SPRINTS.md`
+- Sprint 1: `docs/sprints/sprint-01-backlog.md`
 
 ## Estado Atual
-MVP corporativo funcional com foco em tomada de decisao operacional, pronto para evoluir com autenticacao, trilha de auditoria aprofundada, ingestao produtiva e governanca de acesso.
+MVP corporativo funcional com foco em tomada de decisao operacional, com autenticacao por perfil, observabilidade basica, ETL, motor de risco, automacao de missoes e copiloto explicativo.

@@ -19,6 +19,7 @@ class ETLPipelineService:
         self.growth = GrowthService()
         self.recommendation = RecommendationService()
         self.weather = WeatherService()
+        self._weather_cache: dict[tuple[float, float], dict] = {}
 
     def _read_path(self, path: Path):
         ext = path.suffix.lower()
@@ -34,6 +35,12 @@ class ETLPipelineService:
             return gdf.drop(columns=['geometry'], errors='ignore')
         return None
 
+    async def _get_weather_cached(self, latitude: float, longitude: float) -> dict:
+        key = (round(latitude, 2), round(longitude, 2))
+        if key not in self._weather_cache:
+            self._weather_cache[key] = await self.weather.get_weather(latitude, longitude)
+        return self._weather_cache[key]
+
     async def import_files(self, files: list[Path]) -> list[TrechoModel]:
         frames = []
         for path in files:
@@ -48,7 +55,10 @@ class ETLPipelineService:
         trechos: list[TrechoModel] = []
 
         for idx, row in unified.iterrows():
-            weather = await self.weather.get_weather(float(row['latitude']), float(row['longitude']))
+            latitude = float(row['latitude'])
+            longitude = float(row['longitude'])
+            weather = await self._get_weather_cached(latitude, longitude)
+
             climate_boost = self.weather.climate_risk_boost(weather['chuva_mm_3d'], weather['umidade_media_24h'])
             chuva_operacional = float(row['chuva_acumulada_mm']) + weather['chuva_mm_3d']
 
@@ -75,8 +85,8 @@ class ETLPipelineService:
                     nivel_rocada=float(row['nivel_rocada']),
                     data_referencia=row['data_referencia'] if isinstance(row['data_referencia'], date) else date.today(),
                     status=str(row['status']),
-                    latitude=float(row['latitude']),
-                    longitude=float(row['longitude']),
+                    latitude=latitude,
+                    longitude=longitude,
                     geom=from_shape(build_linestring(row), srid=4326),
                     dias_sem_manutencao=int(row['dias_sem_manutencao']),
                     chuva_acumulada_mm=chuva_operacional,

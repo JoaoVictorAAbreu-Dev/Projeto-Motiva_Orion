@@ -1,5 +1,6 @@
-﻿from datetime import date
+from datetime import date
 
+from app.core.auth import hash_password
 from app.database.models import IndicadorModel, UsuarioModel
 from app.database.session import SessionLocal
 
@@ -8,10 +9,39 @@ def run() -> None:
     db = SessionLocal()
     try:
         if db.query(UsuarioModel).count() == 0:
-            db.add(UsuarioModel(nome='Operador ORION', email='operador@motiva-orion.local', perfil='operador'))
+            db.add_all(
+                [
+                    UsuarioModel(
+                        nome='Admin ORION',
+                        email='admin@motiva-orion.local',
+                        perfil='admin',
+                        password_hash=hash_password('orion.admin.123'),
+                    ),
+                    UsuarioModel(
+                        nome='Gestor ORION',
+                        email='gestor@motiva-orion.local',
+                        perfil='gestor',
+                        password_hash=hash_password('orion.gestor.123'),
+                    ),
+                    UsuarioModel(
+                        nome='Operador ORION',
+                        email='operador@motiva-orion.local',
+                        perfil='operador',
+                        password_hash=hash_password('orion.operador.123'),
+                    ),
+                ]
+            )
 
         if db.query(IndicadorModel).count() == 0:
-            db.add(IndicadorModel(data_referencia=date.today(), total_trechos=0, trechos_criticos=0, indice_medio_iro=0, economia_potencial=0))
+            db.add(
+                IndicadorModel(
+                    data_referencia=date.today(),
+                    total_trechos=0,
+                    trechos_criticos=0,
+                    indice_medio_iro=0,
+                    economia_potencial=0,
+                )
+            )
 
         db.commit()
     finally:

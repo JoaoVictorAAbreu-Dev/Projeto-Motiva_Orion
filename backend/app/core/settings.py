@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     auth_algorithm: str = 'HS256'
     auth_access_token_expire_minutes: int = 120
     auth_default_password: str = 'orion123'
+    auth_allow_plaintext_fallback: bool = True
 
     groq_api_key: str | None = None
     groq_model: str = 'llama-3.3-70b-versatile'

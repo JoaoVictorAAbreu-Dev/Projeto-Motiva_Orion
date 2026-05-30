@@ -3,6 +3,7 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+from passlib.context import CryptContext
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -11,6 +12,7 @@ from app.database.models import UsuarioModel
 from app.database.session import get_db
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/api/v1/auth/login')
+pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 
 
 class Token(BaseModel):
@@ -33,9 +35,20 @@ def authenticate_user(db: Session, email: str, password: str) -> UsuarioModel | 
     user = db.query(UsuarioModel).filter(UsuarioModel.email == email, UsuarioModel.ativo.is_(True)).first()
     if not user:
         return None
-    if password != settings.auth_default_password:
-        return None
-    return user
+
+    if user.password_hash:
+        if not pwd_context.verify(password, user.password_hash):
+            return None
+        return user
+
+    if settings.auth_allow_plaintext_fallback and password == settings.auth_default_password:
+        return user
+
+    return None
+
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
 
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> UsuarioModel:

@@ -16,16 +16,32 @@ const getColor = (classificacao: string) => {
 const prioridade = (iro: number) => (iro >= 70 ? 'Alta' : iro >= 40 ? 'Media' : 'Baixa');
 
 export function OperationalMap({ segments }: Props) {
-  const mapRef = useRef<HTMLDivElement | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const layerRef = useRef<L.LayerGroup | null>(null);
 
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapContainerRef.current || mapRef.current) return;
 
-    const map = L.map(mapRef.current).setView([-23.25, -46.7], 9);
+    mapRef.current = L.map(mapContainerRef.current).setView([-23.25, -46.7], 9);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+    }).addTo(mapRef.current);
+
+    layerRef.current = L.layerGroup().addTo(mapRef.current);
+
+    return () => {
+      mapRef.current?.remove();
+      mapRef.current = null;
+      layerRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mapRef.current || !layerRef.current) return;
+
+    layerRef.current.clearLayers();
 
     segments.forEach((segment) => {
       L.circleMarker([segment.latitude, segment.longitude], {
@@ -36,12 +52,8 @@ export function OperationalMap({ segments }: Props) {
         .bindPopup(
           `<strong>Trecho #${segment.id}</strong><br/>KM ${segment.km_inicio} - ${segment.km_fim}<br/>Status: ${segment.classificacao}<br/>IRO: ${segment.iro}<br/>Ultima intervencao: ha ${segment.dias_sem_manutencao} dias<br/>Prioridade: ${prioridade(segment.iro)}<br/>Recomendacao: ${segment.recomendacao_acao}`
         )
-        .addTo(map);
+        .addTo(layerRef.current!);
     });
-
-    return () => {
-      map.remove();
-    };
   }, [segments]);
 
   return (
@@ -50,7 +62,7 @@ export function OperationalMap({ segments }: Props) {
         <h2 className="text-base font-semibold text-white">Mapa Operacional</h2>
         <div className="text-xs text-slate-300">Verde: Normal | Amarelo: Atencao | Vermelho: Critico</div>
       </div>
-      <div ref={mapRef} className="h-[420px] overflow-hidden rounded-lg border border-slate-700" />
+      <div ref={mapContainerRef} className="h-[420px] overflow-hidden rounded-lg border border-slate-700" />
     </section>
   );
 }

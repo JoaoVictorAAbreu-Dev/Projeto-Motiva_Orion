@@ -81,3 +81,16 @@ class PlanoSemanalRead(BaseModel):
     economia_logistica_total: float
     prioridade_maxima: str
     recomendacoes: list[str]
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class CopilotAskRequest(BaseModel):
+    pergunta: str
+
+
+class CopilotAskResponse(BaseModel):
+    resposta: str
