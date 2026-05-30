@@ -465,9 +465,12 @@ npm run dev
 ```
 
 ## Credenciais Seed
-- `admin@motiva-orion.local` / `orion.admin.123`
-- `gestor@motiva-orion.local` / `orion.gestor.123`
-- `operador@motiva-orion.local` / `orion.operador.123`
+- `admin@motiva-orion.local` / `orion123`
+- `gestor@motiva-orion.local` / `orion123`
+- `operador@motiva-orion.local` / `orion123`
+
+Observacao de ambiente local:
+- Nesta configuracao local, as contas podem operar sem `password_hash` persistido e usam `auth_default_password` definido no backend.
 
 ## Fluxo Recomendado de Uso
 1. Colocar arquivos em `backend/data/raw`.
@@ -501,3 +504,5 @@ npm run dev
 Motiva ORION foi estruturado para operar como plataforma de decisao operacional em infraestrutura rodoviaria, conectando dados, risco, conformidade e execucao em um unico fluxo corporativo.
 
 O produto nao se limita a visualizacao de indicadores. O foco e transformar contexto operacional em acao priorizada, com rastreabilidade, governanca e impacto direto em custo, seguranca e eficiencia da operacao.
+
+
