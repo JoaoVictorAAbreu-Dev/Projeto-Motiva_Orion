@@ -12,7 +12,7 @@ export const toDashboardMetrics = (segments: RoadSegment[]): DashboardMetrics =>
   const trechosCriticos = segments.filter((s) => s.iro >= 70).length;
   const total = segments.length;
   const riscoMedio = total === 0 ? 0 : segments.reduce((acc, s) => acc + s.iro, 0) / total;
-  const economiaEstimada = segments.reduce((acc, s) => acc + s.custo_estimado * (s.iro >= 70 ? 0.24 : 0.1), 0);
+  const economiaEstimada = segments.reduce((acc, s) => acc + (s.custo_estimado ?? 0) * (s.iro >= 70 ? 0.24 : 0.1), 0);
 
   return {
     total_trechos: total,
@@ -22,4 +22,3 @@ export const toDashboardMetrics = (segments: RoadSegment[]): DashboardMetrics =>
     indice_medio_risco: Number(riscoMedio.toFixed(1))
   };
 };
-

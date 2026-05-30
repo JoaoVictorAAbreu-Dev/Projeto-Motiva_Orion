@@ -65,3 +65,19 @@ class DashboardRead(BaseModel):
     missoes_planejadas: int
     economia_potencial: float
     indice_medio_risco: float
+    conformidade_contratual: float
+
+
+class ConformidadeRead(BaseModel):
+    conformidade_geral: float
+    trechos_risco_contratual: int
+    prazo_medio_restante_dias: float
+    historico_intervencoes: int
+
+
+class PlanoSemanalRead(BaseModel):
+    total_missoes: int
+    custo_total_estimado: float
+    economia_logistica_total: float
+    prioridade_maxima: str
+    recomendacoes: list[str]

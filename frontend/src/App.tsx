@@ -2,8 +2,9 @@
 import { askOperationalCopilot } from './application/copilot';
 import { buildExecutivePanel, calculateImpact } from './application/decision';
 import { buildMissionsByScenario } from './application/missions';
-import type { RoadSegment, ScenarioMode } from './domain/types';
-import { getSegments } from './infrastructure/api/segments.api';
+import type { ComplianceData, DashboardData, MissionPlan, RoadSegment, ScenarioMode, WeeklyPlanData } from './domain/types';
+import { downloadReport, generateWeeklyPlan, getCompliance, getDashboard, getMissions, getSegments } from './infrastructure/api/segments.api';
+import { CompliancePanel } from './ui/modules/dashboard/CompliancePanel';
 import { ExecutivePanel } from './ui/modules/dashboard/ExecutivePanel';
 import { ScenarioSimulator } from './ui/modules/dashboard/ScenarioSimulator';
 import { OperationalMap } from './ui/modules/map/OperationalMap';
@@ -24,21 +25,38 @@ const sections: Array<{ id: SectionId; label: string; subtitle: string }> = [
 
 function App() {
   const [segments, setSegments] = useState<RoadSegment[]>([]);
+  const [missions, setMissions] = useState<MissionPlan[]>([]);
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [compliance, setCompliance] = useState<ComplianceData | null>(null);
+  const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlanData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scenario, setScenario] = useState<ScenarioMode>('seguranca');
   const [activeSection, setActiveSection] = useState<SectionId>('executivo');
   const [selectedTrechoId, setSelectedTrechoId] = useState<number | null>(null);
+  const [generatingPlan, setGeneratingPlan] = useState(false);
+
+  const loadData = async () => {
+    const [segmentsData, missionsData, dashboardData, complianceData] = await Promise.all([
+      getSegments(),
+      getMissions(),
+      getDashboard(),
+      getCompliance()
+    ]);
+
+    setSegments(segmentsData);
+    setMissions(missionsData);
+    setDashboard(dashboardData);
+    setCompliance(complianceData);
+
+    if (segmentsData.length > 0) {
+      const first = [...segmentsData].sort((a, b) => b.iro - a.iro)[0];
+      setSelectedTrechoId(first.id);
+    }
+  };
 
   useEffect(() => {
-    getSegments()
-      .then((data) => {
-        setSegments(data);
-        if (data.length > 0) {
-          const first = [...data].sort((a, b) => b.iro - a.iro)[0];
-          setSelectedTrechoId(first.id);
-        }
-      })
+    loadData()
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
@@ -65,9 +83,9 @@ function App() {
     return () => observer.disconnect();
   }, []);
 
-  const missions = useMemo(() => buildMissionsByScenario(segments, scenario), [segments, scenario]);
-  const executivePanel = useMemo(() => buildExecutivePanel(segments, missions, scenario), [segments, missions, scenario]);
-  const impact = useMemo(() => calculateImpact(segments, missions, scenario), [segments, missions, scenario]);
+  const scenarioMissions = useMemo(() => buildMissionsByScenario(segments, scenario), [segments, scenario]);
+  const executivePanel = useMemo(() => buildExecutivePanel(segments, missions, scenario, dashboard), [segments, missions, scenario, dashboard]);
+  const impact = useMemo(() => calculateImpact(segments, scenarioMissions, scenario), [segments, scenarioMissions, scenario]);
   const selectedTrecho = useMemo(
     () => segments.find((s) => s.id === selectedTrechoId) ?? null,
     [segments, selectedTrechoId]
@@ -78,12 +96,40 @@ function App() {
     if (node) node.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  const onGeneratePlan = async () => {
+    try {
+      setGeneratingPlan(true);
+      const plan = await generateWeeklyPlan();
+      setWeeklyPlan(plan);
+      await loadData();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setGeneratingPlan(false);
+    }
+  };
+
   return (
     <main className="mx-auto min-h-screen max-w-[1450px] px-3 pb-24 pt-3 sm:px-4 md:px-6 md:pb-10 md:pt-5">
       <header className="rounded-2xl border border-slate-700 bg-slate-900/90 p-4 shadow-panel sm:p-5">
         <p className="text-[11px] uppercase tracking-[0.22em] text-primary">Motiva ORION</p>
         <h1 className="mt-1 text-xl font-semibold text-white sm:text-2xl">Centro de Decisao Operacional</h1>
-        <p className="mt-2 text-sm text-slate-300">Interface orientada a decisao, com priorizacao, simulacao e execucao em fluxo unico.</p>
+        <p className="mt-2 text-sm text-slate-300">Plataforma para reduzir custo, risco e nao conformidade contratual com decisoes prontas para execucao.</p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void onGeneratePlan()}
+            disabled={generatingPlan}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-60"
+          >
+            {generatingPlan ? 'Gerando plano...' : 'Gerar Plano Operacional da Semana'}
+          </button>
+          {weeklyPlan && (
+            <span className="text-xs text-slate-300">
+              Plano: {weeklyPlan.total_missoes} missoes | Custo R$ {weeklyPlan.custo_total_estimado.toLocaleString('pt-BR')}
+            </span>
+          )}
+        </div>
       </header>
 
       <nav className="sticky top-0 z-40 mt-3 rounded-xl border border-slate-700/80 bg-slate-950/85 p-2 backdrop-blur">
@@ -117,6 +163,7 @@ function App() {
               <p className="text-sm text-slate-300">Leitura imediata da situacao para tomada de decisao.</p>
             </div>
             <ExecutivePanel panel={executivePanel} />
+            <CompliancePanel data={compliance} />
           </section>
 
           <section id="cenario" className="section-anchor grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
@@ -155,7 +202,7 @@ function App() {
             </div>
             <div className="grid gap-4 xl:grid-cols-2">
               <MissionPlanning missions={missions} />
-              <CopilotPanel onAsk={(q) => askOperationalCopilot(q, segments, missions)} />
+              <CopilotPanel onAsk={(q) => askOperationalCopilot(q, segments, missions)} onDownloadReport={downloadReport} />
             </div>
           </section>
         </div>

@@ -1,4 +1,4 @@
-﻿import { AlertTriangle, BadgeDollarSign, ClipboardCheck, Radar } from 'lucide-react';
+﻿import { AlertTriangle, BadgeDollarSign, ClipboardCheck, Radar, ShieldCheck } from 'lucide-react';
 import type { ExecutiveDecisionPanel } from '../../../domain/types';
 
 interface Props {
@@ -11,22 +11,26 @@ export function ExecutivePanel({ panel }: Props) {
   return (
     <section className="rounded-xl border border-slate-700 bg-slate-900/85 p-4 shadow-panel">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">Painel Executivo de Decisao</h2>
+        <h2 className="text-lg font-semibold text-white">Centro de Operacoes ORION</h2>
         <span className={`text-sm font-semibold ${situationColor}`}>Situacao: {panel.situacao_geral}</span>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <article className="rounded-lg border border-slate-700 bg-slate-800/60 p-3">
           <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-300"><AlertTriangle className="h-4 w-4" /> Trechos Criticos</p>
           <p className="mt-2 text-2xl font-semibold text-white">{panel.trechos_criticos}</p>
         </article>
         <article className="rounded-lg border border-slate-700 bg-slate-800/60 p-3">
-          <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-300"><Radar className="h-4 w-4" /> Missoes Recomendadas</p>
+          <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-300"><Radar className="h-4 w-4" /> Missoes Ativas</p>
           <p className="mt-2 text-2xl font-semibold text-white">{panel.missoes_recomendadas}</p>
         </article>
         <article className="rounded-lg border border-slate-700 bg-slate-800/60 p-3">
           <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-300"><BadgeDollarSign className="h-4 w-4" /> Economia Potencial</p>
           <p className="mt-2 text-2xl font-semibold text-white">R$ {panel.economia_potencial.toLocaleString('pt-BR')}</p>
+        </article>
+        <article className="rounded-lg border border-slate-700 bg-slate-800/60 p-3">
+          <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-300"><ShieldCheck className="h-4 w-4" /> Conformidade Contratual</p>
+          <p className="mt-2 text-2xl font-semibold text-white">{panel.conformidade_contratual}%</p>
         </article>
         <article className="rounded-lg border border-slate-700 bg-slate-800/60 p-3">
           <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-300"><ClipboardCheck className="h-4 w-4" /> Decisao Principal</p>

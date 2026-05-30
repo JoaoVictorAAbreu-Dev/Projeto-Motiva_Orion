@@ -3,7 +3,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.database.models import IndicadorModel, MissaoModel, TrechoModel
+from app.database.models import IntervencaoModel, IndicadorModel, MissaoModel, TrechoModel
 
 
 class TrechoRepository:
@@ -48,3 +48,11 @@ class MissaoRepository:
         self.db.query(MissaoModel).delete()
         self.db.add_all(missoes)
         self.db.commit()
+
+
+class IntervencaoRepository:
+    def __init__(self, db: Session) -> None:
+        self.db = db
+
+    def count(self) -> int:
+        return self.db.query(IntervencaoModel).count()

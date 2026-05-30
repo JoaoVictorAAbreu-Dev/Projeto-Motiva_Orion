@@ -54,19 +54,20 @@ export function buildMissionsByScenario(
       }
     }
 
-    const cost = cluster.reduce((acc, s) => acc + s.custo_estimado, 0) * cfg.costFactor;
+    const costBase = cluster.reduce((acc, s) => acc + (s.custo_estimado ?? 0), 0);
+    const cost = costBase * cfg.costFactor;
     const avgRisk = cluster.reduce((acc, s) => acc + s.iro, 0) / cluster.length;
 
     missions.push({
-      id: `M-${String(missions.length + 1).padStart(2, '0')}`,
-      segment_ids: cluster.map((s) => s.id),
-      centroid: {
-        lat: cluster.reduce((acc, s) => acc + s.latitude, 0) / cluster.length,
-        lng: cluster.reduce((acc, s) => acc + s.longitude, 0) / cluster.length
-      },
+      id: missions.length + 1,
+      codigo: `SIM-${String(missions.length + 1).padStart(3, '0')}`,
+      prioridade: avgRisk >= 70 ? 'Alta' : 'Media',
+      equipe: missions.length % 2 === 0 ? 'Equipe Norte' : 'Equipe Sul',
+      trecho_ids: cluster.map((s) => s.id),
       tempo_estimado_h: Number((cluster.length * 1.7 * (1 / cfg.teamFactor)).toFixed(1)),
       custo_estimado: Math.round(cost),
-      criticidade_media: Number(avgRisk.toFixed(1))
+      economia_logistica_estimada: Math.round(cost * 0.12),
+      plano_semanal_ref: 'SIMULADO'
     });
   }
 
