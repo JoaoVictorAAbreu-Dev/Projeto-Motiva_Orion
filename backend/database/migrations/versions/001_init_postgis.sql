@@ -1,4 +1,4 @@
-﻿CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS postgis;
 
 CREATE TABLE IF NOT EXISTS trechos (
     id INTEGER PRIMARY KEY,
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS trechos (
     status VARCHAR(16) NOT NULL DEFAULT 'ativo',
     latitude DOUBLE PRECISION NOT NULL,
     longitude DOUBLE PRECISION NOT NULL,
-    geom geometry(LINESTRING, 4326),
+    geom TEXT,
     dias_sem_manutencao INTEGER NOT NULL DEFAULT 0,
     chuva_acumulada_mm DOUBLE PRECISION NOT NULL DEFAULT 0,
     criticidade_operacional DOUBLE PRECISION NOT NULL DEFAULT 0,

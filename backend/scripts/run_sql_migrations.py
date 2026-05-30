@@ -11,8 +11,11 @@ def run() -> None:
 
     with engine.begin() as conn:
         for sql_file in sql_files:
-            sql = sql_file.read_text(encoding='utf-8')
-            conn.execute(text(sql))
+            sql = sql_file.read_text(encoding='utf-8-sig')
+            sql = sql.replace('CREATE EXTENSION IF NOT EXISTS postgis;', '')
+            statements = [part.strip() for part in sql.split(';') if part.strip()]
+            for statement in statements:
+                conn.execute(text(statement))
             print(f'Applied: {sql_file.name}')
 
 

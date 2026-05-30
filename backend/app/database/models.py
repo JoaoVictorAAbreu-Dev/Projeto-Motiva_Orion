@@ -1,6 +1,5 @@
 ﻿from datetime import date, datetime
 
-from geoalchemy2 import Geometry
 from sqlalchemy import DATE, JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -22,7 +21,7 @@ class TrechoModel(Base):
 
     latitude: Mapped[float] = mapped_column(Float, nullable=False)
     longitude: Mapped[float] = mapped_column(Float, nullable=False)
-    geom: Mapped[str | None] = mapped_column(Geometry('LINESTRING', srid=4326))
+    geom: Mapped[str | None] = mapped_column(Text)
 
     dias_sem_manutencao: Mapped[int] = mapped_column(Integer, default=0)
     chuva_acumulada_mm: Mapped[float] = mapped_column(Float, default=0)

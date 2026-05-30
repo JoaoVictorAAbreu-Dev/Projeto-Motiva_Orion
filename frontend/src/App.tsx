@@ -64,7 +64,13 @@ function App() {
     }
 
     loadData()
-      .catch((err: Error) => setError(err.message))
+      .catch((err: Error) => {
+        if (err.message.includes('Sessao expirada')) {
+          clearToken();
+          setIsAuthenticated(false);
+        }
+        setError(err.message);
+      })
       .finally(() => setLoading(false));
   }, [isAuthenticated]);
 

@@ -12,8 +12,8 @@ if not exist "%BACKEND%\.venv\Scripts\python.exe" (
 
 echo [Motiva ORION] Iniciando backend e frontend...
 
-start "Motiva ORION - Backend" cmd /k "cd /d "%BACKEND%" && .venv\Scripts\python.exe -m uvicorn app.main:app --reload"
-start "Motiva ORION - Frontend" cmd /k "cd /d "%FRONTEND%" && npm run dev"
+start "Motiva ORION - Backend" cmd /k "cd /d ""%BACKEND%"" && set PYTHONPATH=. && .venv\Scripts\python.exe scripts\run_sql_migrations.py && .venv\Scripts\python.exe scripts\seed_db.py && .venv\Scripts\python.exe -m uvicorn app.main:app --reload"
+start "Motiva ORION - Frontend" cmd /k "cd /d ""%FRONTEND%"" && npm run dev"
 
 echo [OK] Backend e frontend iniciados em janelas separadas.
 echo Backend: http://127.0.0.1:8000

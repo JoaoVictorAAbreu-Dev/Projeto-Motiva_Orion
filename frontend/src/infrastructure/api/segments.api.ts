@@ -29,13 +29,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export async function login(email: string, password: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/auth/login-json`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/v1/auth/login-json`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+  } catch {
+    throw new Error('Nao foi possivel conectar na API. Verifique se o backend esta ativo em http://127.0.0.1:8000.');
+  }
 
-  if (!response.ok) throw new Error('Falha de autenticacao');
+  if (!response.ok) throw new Error('Falha de autenticacao. Verifique usuario e senha.');
 
   const payload = (await response.json()) as { access_token: string };
   localStorage.setItem(TOKEN_KEY, payload.access_token);
