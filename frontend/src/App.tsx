@@ -6,9 +6,10 @@ import type { RoadSegment, ScenarioMode } from './domain/types';
 import { getSegments } from './infrastructure/api/segments.api';
 import { ExecutivePanel } from './ui/modules/dashboard/ExecutivePanel';
 import { ScenarioSimulator } from './ui/modules/dashboard/ScenarioSimulator';
-import { MissionPlanning } from './ui/modules/missions/MissionPlanning';
 import { OperationalMap } from './ui/modules/map/OperationalMap';
+import { MissionPlanning } from './ui/modules/missions/MissionPlanning';
 import { PriorityRanking } from './ui/modules/ranking/PriorityRanking';
+import { TrechoDetail } from './ui/modules/ranking/TrechoDetail';
 import { CopilotPanel } from './ui/modules/reports/CopilotPanel';
 import { ImpactPanel } from './ui/modules/reports/ImpactPanel';
 
@@ -27,10 +28,17 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [scenario, setScenario] = useState<ScenarioMode>('seguranca');
   const [activeSection, setActiveSection] = useState<SectionId>('executivo');
+  const [selectedTrechoId, setSelectedTrechoId] = useState<number | null>(null);
 
   useEffect(() => {
     getSegments()
-      .then(setSegments)
+      .then((data) => {
+        setSegments(data);
+        if (data.length > 0) {
+          const first = [...data].sort((a, b) => b.iro - a.iro)[0];
+          setSelectedTrechoId(first.id);
+        }
+      })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
@@ -60,6 +68,10 @@ function App() {
   const missions = useMemo(() => buildMissionsByScenario(segments, scenario), [segments, scenario]);
   const executivePanel = useMemo(() => buildExecutivePanel(segments, missions, scenario), [segments, missions, scenario]);
   const impact = useMemo(() => calculateImpact(segments, missions, scenario), [segments, missions, scenario]);
+  const selectedTrecho = useMemo(
+    () => segments.find((s) => s.id === selectedTrechoId) ?? null,
+    [segments, selectedTrechoId]
+  );
 
   const goToSection = (id: SectionId) => {
     const node = document.getElementById(id);
@@ -127,12 +139,13 @@ function App() {
           <section id="mapa" className="section-anchor space-y-3">
             <div className="section-heading">
               <h2 className="text-base font-semibold text-white">Visao Operacional</h2>
-              <p className="text-sm text-slate-300">Mapa tatico com ranking para despacho de equipes.</p>
+              <p className="text-sm text-slate-300">Mapa tatico com ranking e detalhe tecnico por trecho.</p>
             </div>
             <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
               <OperationalMap segments={segments} />
-              <PriorityRanking segments={segments} />
+              <PriorityRanking segments={segments} selectedId={selectedTrechoId} onSelect={setSelectedTrechoId} />
             </div>
+            <TrechoDetail trecho={selectedTrecho} />
           </section>
 
           <section id="missoes" className="section-anchor space-y-3">

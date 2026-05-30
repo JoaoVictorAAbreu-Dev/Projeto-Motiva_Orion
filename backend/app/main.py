@@ -1,21 +1,24 @@
-from fastapi import FastAPI
+﻿from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.presentation.api.v1.routes import router
+from app.api.v1.orion_routes import router as orion_router
+from app.core.settings import settings
+from app.presentation.api.v1.routes import router as legacy_router
 
-app = FastAPI(title="Motiva ORION API", version="0.1.0")
+app = FastAPI(title=settings.app_name, version=settings.app_version)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=['*'],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=['*'],
+    allow_headers=['*'],
 )
 
-app.include_router(router, prefix="/api/v1")
+app.include_router(orion_router)
+app.include_router(legacy_router, prefix='/api/v1')
 
 
-@app.get("/health")
+@app.get('/health')
 def health() -> dict[str, str]:
-    return {"status": "ok"}
+    return {'status': 'ok'}
