@@ -13,3 +13,8 @@ openpyxl==3.1.5
 shapely==2.1.2
 fastkml==1.4.0
 reportlab==4.4.4
+prometheus-client==0.22.1
+python-jose[cryptography]==3.5.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.20
+pytest==8.4.2

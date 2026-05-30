@@ -3,11 +3,14 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.application.services.operational_bootstrap_service import OperationalBootstrapService
 from app.application.services.operational_plan_service import OperationalPlanService
 from app.application.services.report_service import build_report_pdf
+from app.core.auth import Token, authenticate_user, create_access_token, get_current_user, require_roles
+from app.database.models import UsuarioModel
 from app.database.session import get_db
 from app.domain.schemas import ConformidadeRead, DashboardRead, IndicadorRead, MissaoRead, PlanoSemanalRead, TrechoRead
 from app.repositories.core_repositories import IndicadorRepository, IntervencaoRepository, MissaoRepository, TrechoRepository
@@ -15,25 +18,55 @@ from app.repositories.core_repositories import IndicadorRepository, IntervencaoR
 router = APIRouter(prefix='/api/v1', tags=['orion'])
 
 
+@router.post('/auth/login', response_model=Token)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)) -> Token:
+    user = authenticate_user(db, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(status_code=401, detail='Usuario ou senha invalidos')
+    token = create_access_token(subject=user.email, perfil=user.perfil)
+    return Token(access_token=token, token_type='bearer')
+
+
+@router.get('/auth/me')
+def me(user: UsuarioModel = Depends(get_current_user)) -> dict:
+    return {'id': user.id, 'nome': user.nome, 'email': user.email, 'perfil': user.perfil}
+
+
 @router.post('/bootstrap')
-async def bootstrap_data(db: Session = Depends(get_db)) -> dict:
+async def bootstrap_data(
+    db: Session = Depends(get_db),
+    _: UsuarioModel = Depends(require_roles('admin', 'gestor'))
+) -> dict:
     service = OperationalBootstrapService(db)
     raw_dir = Path(__file__).resolve().parents[3] / 'data' / 'raw'
     return await service.load_from_raw(raw_dir)
 
 
+@router.post('/imports/gestao-verde')
+async def import_gestao_verde(
+    db: Session = Depends(get_db),
+    _: UsuarioModel = Depends(require_roles('admin', 'gestor'))
+) -> dict:
+    service = OperationalBootstrapService(db)
+    default_paths = [
+        Path(r'C:\Users\jv921\Downloads\Arquivos - Dados challenge MOTIVA\02. Dados Gestão verde - Atual\Retigrafico\RA-RET-ROÇ-LIMP-2026-03-13.xlsx'),
+        Path(r'C:\Users\jv921\Downloads\Arquivos - Dados challenge MOTIVA\02. Dados Gestão verde - Atual\Retigrafico\RA-RET-ROÇ-LIMP-2026-03-20.xlsx')
+    ]
+    return await service.load_from_paths(default_paths)
+
+
 @router.get('/trechos', response_model=list[TrechoRead])
-def list_trechos(db: Session = Depends(get_db)) -> list[TrechoRead]:
+def list_trechos(db: Session = Depends(get_db), _: UsuarioModel = Depends(get_current_user)) -> list[TrechoRead]:
     return TrechoRepository(db).list()
 
 
 @router.get('/trechos/criticos', response_model=list[TrechoRead])
-def list_trechos_criticos(db: Session = Depends(get_db)) -> list[TrechoRead]:
+def list_trechos_criticos(db: Session = Depends(get_db), _: UsuarioModel = Depends(get_current_user)) -> list[TrechoRead]:
     return TrechoRepository(db).list_criticos()
 
 
 @router.get('/trechos/{trecho_id}', response_model=TrechoRead)
-def get_trecho(trecho_id: int, db: Session = Depends(get_db)) -> TrechoRead:
+def get_trecho(trecho_id: int, db: Session = Depends(get_db), _: UsuarioModel = Depends(get_current_user)) -> TrechoRead:
     trecho = TrechoRepository(db).get(trecho_id)
     if trecho is None:
         raise HTTPException(status_code=404, detail='Trecho nao encontrado')
@@ -41,24 +74,27 @@ def get_trecho(trecho_id: int, db: Session = Depends(get_db)) -> TrechoRead:
 
 
 @router.get('/indicadores', response_model=list[IndicadorRead])
-def list_indicadores(db: Session = Depends(get_db)) -> list[IndicadorRead]:
+def list_indicadores(db: Session = Depends(get_db), _: UsuarioModel = Depends(get_current_user)) -> list[IndicadorRead]:
     return IndicadorRepository(db).list()
 
 
 @router.get('/missoes', response_model=list[MissaoRead])
-def list_missoes(db: Session = Depends(get_db)) -> list[MissaoRead]:
+def list_missoes(db: Session = Depends(get_db), _: UsuarioModel = Depends(get_current_user)) -> list[MissaoRead]:
     return MissaoRepository(db).list()
 
 
 @router.post('/plano-semanal/gerar', response_model=PlanoSemanalRead)
-def generate_weekly_plan(db: Session = Depends(get_db)) -> PlanoSemanalRead:
+def generate_weekly_plan(
+    db: Session = Depends(get_db),
+    _: UsuarioModel = Depends(require_roles('admin', 'gestor', 'coordenador'))
+) -> PlanoSemanalRead:
     trechos = TrechoRepository(db).list()
     missoes = MissaoRepository(db).list()
     return PlanoSemanalRead(**OperationalPlanService.build_weekly_plan(trechos, missoes))
 
 
 @router.get('/conformidade', response_model=ConformidadeRead)
-def conformidade(db: Session = Depends(get_db)) -> ConformidadeRead:
+def conformidade(db: Session = Depends(get_db), _: UsuarioModel = Depends(get_current_user)) -> ConformidadeRead:
     trechos = TrechoRepository(db).list()
     intervencoes = IntervencaoRepository(db).count()
 
@@ -76,7 +112,7 @@ def conformidade(db: Session = Depends(get_db)) -> ConformidadeRead:
 
 
 @router.get('/dashboard', response_model=DashboardRead)
-def dashboard(db: Session = Depends(get_db)) -> DashboardRead:
+def dashboard(db: Session = Depends(get_db), _: UsuarioModel = Depends(get_current_user)) -> DashboardRead:
     trechos = TrechoRepository(db).list()
     missoes = MissaoRepository(db).list()
 
@@ -97,7 +133,7 @@ def dashboard(db: Session = Depends(get_db)) -> DashboardRead:
 
 
 @router.get('/relatorios/{tipo}')
-def report(tipo: str, db: Session = Depends(get_db)) -> Response:
+def report(tipo: str, db: Session = Depends(get_db), _: UsuarioModel = Depends(get_current_user)) -> Response:
     trechos = TrechoRepository(db).list()
     missoes = MissaoRepository(db).list()
 
@@ -109,17 +145,17 @@ def report(tipo: str, db: Session = Depends(get_db)) -> Response:
     criticos = len([t for t in trechos if t.classificacao == 'Critico'])
 
     lines = [
-        f"Data de geracao: {now}",
-        f"Trechos monitorados: {len(trechos)}",
-        f"Trechos criticos: {criticos}",
-        f"Missoes planejadas: {len(missoes)}",
-        f"Custo total estimado: R$ {sum(m.custo_estimado for m in missoes):,.2f}",
+        f'Data de geracao: {now}',
+        f'Trechos monitorados: {len(trechos)}',
+        f'Trechos criticos: {criticos}',
+        f'Missoes planejadas: {len(missoes)}',
+        f'Custo total estimado: R$ {sum(m.custo_estimado for m in missoes):,.2f}',
     ]
 
     if tipo_normalizado == 'conformidade':
-        lines.append(f"Conformidade estimada: {round(max(0.0, 100 - ((criticos / max(1, len(trechos))) * 100)), 1)}%")
+        lines.append(f'Conformidade estimada: {round(max(0.0, 100 - ((criticos / max(1, len(trechos))) * 100)), 1)}%')
 
-    pdf_bytes = build_report_pdf(f"Relatorio {tipo_normalizado.title()} - Motiva ORION", lines)
+    pdf_bytes = build_report_pdf(f'Relatorio {tipo_normalizado.title()} - Motiva ORION', lines)
     return Response(
         content=pdf_bytes,
         media_type='application/pdf',
