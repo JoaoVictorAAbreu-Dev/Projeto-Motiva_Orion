@@ -1,4 +1,7 @@
-﻿import type { RoadSegment } from '../../../domain/types';
+import { ListFilter } from 'lucide-react';
+import type { RoadSegment } from '../../../domain/types';
+import { ModuleHeader } from '../../components/ModuleHeader';
+import { StatusBadge } from '../../components/StatusBadge';
 
 interface Props {
   segments: RoadSegment[];
@@ -6,27 +9,45 @@ interface Props {
   onSelect: (id: number) => void;
 }
 
+const tone = (classification: string) => {
+  if (classification === 'Critico') return 'critical';
+  if (classification === 'Atencao') return 'warning';
+  return 'success';
+};
+
 export function PriorityRanking({ segments, selectedId, onSelect }: Props) {
   const ordered = [...segments].sort((a, b) => b.iro - a.iro).slice(0, 10);
 
   return (
-    <section className="rounded-xl border border-slate-700 bg-slate-900/80 p-4 shadow-panel">
-      <h2 className="mb-3 text-base font-semibold text-white">Ranking Operacional</h2>
-      <div className="space-y-2">
+    <section className="app-panel overflow-hidden rounded-2xl">
+      <ModuleHeader eyebrow="Priority queue" title="Ranking operacional" description="Ordenacao automatica pelo maior IRO." action={<ListFilter className="h-5 w-5 text-blue-300" />} />
+      <div className="max-h-[524px] space-y-1.5 overflow-y-auto p-3">
+        {ordered.length === 0 && <p className="p-3 text-sm text-slate-400">Nenhum trecho disponivel para classificacao.</p>}
         {ordered.map((segment, index) => (
           <button
             key={segment.id}
             type="button"
             onClick={() => onSelect(segment.id)}
-            className={`w-full rounded-md border p-3 text-left ${
+            className={`group w-full rounded-xl border p-3 text-left transition ${
               selectedId === segment.id
-                ? 'border-primary bg-primary/15'
-                : 'border-slate-700 bg-slate-800/70'
+                ? 'border-blue-400/50 bg-blue-500/12'
+                : 'border-transparent bg-slate-800/30 hover:border-slate-600/60 hover:bg-slate-800/60'
             }`}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-200">#{index + 1} Trecho {segment.km_inicio}-{segment.km_fim}</span>
-              <span className="rounded bg-critical/20 px-2 py-1 text-sm font-semibold text-critical">IRO {segment.iro}</span>
+            <div className="flex items-start gap-3">
+              <span className="font-mono mt-1 text-xs font-semibold text-slate-500">{String(index + 1).padStart(2, '0')}</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-white">Trecho {segment.km_inicio} - {segment.km_fim}</p>
+                  <StatusBadge label={segment.classificacao} tone={tone(segment.classificacao)} />
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="h-1 flex-1 overflow-hidden rounded-full bg-slate-700/60">
+                    <div className="h-full rounded-full bg-gradient-to-r from-blue-500 via-amber-400 to-red-400" style={{ width: `${segment.iro}%` }} />
+                  </div>
+                  <span className="font-mono text-xs font-semibold text-slate-300">IRO {segment.iro}</span>
+                </div>
+              </div>
             </div>
           </button>
         ))}
