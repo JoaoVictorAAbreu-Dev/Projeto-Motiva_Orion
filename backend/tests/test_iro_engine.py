@@ -22,3 +22,28 @@ def test_iro_monotonic_increase() -> None:
     base = engine.compute_iro(20, 10, 5, 20, 20)
     boosted = engine.compute_iro(60, 30, 25, 60, 60)
     assert boosted > base
+
+
+def test_ndvi_dense_boost_increases_iro() -> None:
+    engine = OrionRiskEngine()
+    without_ndvi = engine.compute_iro(40, 10, 12, 30, 30)
+    with_dense_ndvi = engine.compute_iro(40, 10, 12, 30, 30, ndvi=0.8)
+    assert with_dense_ndvi > without_ndvi
+
+
+def test_regulatory_height_exceedance_increases_iro() -> None:
+    engine = OrionRiskEngine()
+    baseline = engine.compute_iro(40, 10, 12, 30, 30, predicted_height_cm=40)
+    with_exceedance = engine.compute_iro(
+        40,
+        10,
+        12,
+        30,
+        30,
+        predicted_height_cm=90,
+        regulatory_limits_cm={
+            'poda_altura_faixa_dominio_cm': 70,
+            'poda_altura_entorno_instalacoes_cm': 50,
+        },
+    )
+    assert with_exceedance > baseline

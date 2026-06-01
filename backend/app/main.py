@@ -1,7 +1,8 @@
-﻿from fastapi import FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1.orion_routes import router as orion_router
+from app.modules.orion.interfaces.http.v1.endpoints.config import router as config_router
+from app.modules.orion.interfaces.http.v1.orion_routes import router as orion_router
 from app.core.settings import settings
 from app.observability import register_observability
 
@@ -17,6 +18,7 @@ app.add_middleware(
 
 register_observability(app)
 app.include_router(orion_router)
+app.include_router(config_router)
 
 
 @app.get('/health')

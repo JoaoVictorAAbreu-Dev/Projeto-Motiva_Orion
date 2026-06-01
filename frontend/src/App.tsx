@@ -18,10 +18,11 @@ import {
 } from 'lucide-react';
 import { buildExecutivePanel, calculateImpact } from './application/decision';
 import { buildMissionsByScenario } from './application/missions';
-import type { ComplianceData, DashboardData, MissionPlan, RoadSegment, ScenarioMode, WeeklyPlanData } from './domain/types';
-import { askCopilot, clearToken, downloadReport, generateWeeklyPlan, getCompliance, getDashboard, getMissions, getSegments, hasToken, login } from './infrastructure/api/segments.api';
+import type { ComplianceData, DashboardData, MissionPlan, RegulatoryRule, RoadSegment, ScenarioMode, WeeklyPlanData } from './domain/types';
+import { askCopilot, clearToken, downloadReport, flushOfflineQueue, generateWeeklyPlan, getCompliance, getDashboard, getMissions, getRegulatoryRules, getSegments, hasToken, login, upsertRegulatoryRule } from './infrastructure/api/segments.api';
 import { CompliancePanel } from './ui/modules/dashboard/CompliancePanel';
 import { ExecutivePanel } from './ui/modules/dashboard/ExecutivePanel';
+import { RegulatorySettingsPanel } from './ui/modules/dashboard/RegulatorySettingsPanel';
 import { ScenarioSimulator } from './ui/modules/dashboard/ScenarioSimulator';
 import { OperationalMap } from './ui/modules/map/OperationalMap';
 import { MissionPlanning } from './ui/modules/missions/MissionPlanning';
@@ -44,6 +45,7 @@ function App() {
   const [missions, setMissions] = useState<MissionPlan[]>([]);
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [compliance, setCompliance] = useState<ComplianceData | null>(null);
+  const [regulatoryRules, setRegulatoryRules] = useState<RegulatoryRule[]>([]);
   const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlanData | null>(null);
   const [loading, setLoading] = useState(hasToken());
   const [error, setError] = useState<string | null>(null);
@@ -57,11 +59,12 @@ function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const loadData = useCallback(async () => {
-    const [segmentsData, missionsData, dashboardData, complianceData] = await Promise.all([
+    const [segmentsData, missionsData, dashboardData, complianceData, rulesData] = await Promise.all([
       getSegments(),
       getMissions(),
       getDashboard(),
-      getCompliance()
+      getCompliance(),
+      getRegulatoryRules()
     ]);
 
     setError(null);
@@ -69,8 +72,19 @@ function App() {
     setMissions(missionsData);
     setDashboard(dashboardData);
     setCompliance(complianceData);
+    setRegulatoryRules(rulesData);
     if (segmentsData.length > 0) setSelectedTrechoId((current) => current ?? segmentsData[0].id);
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const sync = () => {
+      void flushOfflineQueue();
+    };
+    sync();
+    window.addEventListener('online', sync);
+    return () => window.removeEventListener('online', sync);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -234,6 +248,13 @@ function App() {
                   <ExecutivePanel panel={executivePanel} />
                   <CompliancePanel data={compliance} />
                 </div>
+                <RegulatorySettingsPanel
+                  rules={regulatoryRules}
+                  onSave={async (rule) => {
+                    await upsertRegulatoryRule(rule);
+                    await loadData();
+                  }}
+                />
               </section>
 
               <section id="cenario" className="section-anchor space-y-4">

@@ -37,6 +37,16 @@ class Settings(BaseSettings):
     sentinel_token_url: str = 'https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token'
     sentinel_max_calls_per_run: int = 5
     sentinel_timeout_seconds: float = 20.0
+    sentinel_stats_url: str = 'https://services.sentinel-hub.com/api/v1/statistics'
+    sentinel_hub_client_id: str | None = None
+    sentinel_hub_client_secret: str | None = None
+    sentinel_hub_token_url: str = 'https://services.sentinel-hub.com/auth/realms/main/protocol/openid-connect/token'
+
+    ai_model_path: str = 'models/vegetation_height_model.pkl'
+    iro_ndvi_weight: float = 0.2
+    iro_ndvi_threshold_dense: float = 0.6
+    iro_ndvi_dense_boost: float = 0.2
+    iro_predicted_height_weight: float = 0.1
     gestao_verde_import_dir: str = r'C:\Users\jv921\Downloads\Arquivos - Dados challenge MOTIVA'
 
 

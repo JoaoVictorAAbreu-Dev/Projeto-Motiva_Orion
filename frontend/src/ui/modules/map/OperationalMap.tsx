@@ -23,6 +23,7 @@ const prioridade = (iro: number) => (iro >= 70 ? 'Alta' : iro >= 40 ? 'Media' : 
 
 export function OperationalMap({ segments }: Props) {
   const [filter, setFilter] = useState<StatusFilter>('Todos');
+  const [showBiomass, setShowBiomass] = useState(true);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
@@ -60,6 +61,8 @@ export function OperationalMap({ segments }: Props) {
       const point: L.LatLngExpression = [segment.latitude, segment.longitude];
       points.push(point);
       const color = getColor(segment.classificacao);
+      const biomass = segment.altura_vegetacao_predita_cm ?? ((segment.ndvi ?? 0) * 100);
+      const biomassColor = biomass >= 80 ? '#7f1d1d' : biomass >= 60 ? '#b45309' : biomass >= 40 ? '#65a30d' : '#16a34a';
 
       L.circleMarker(point, {
         radius: segment.classificacao === 'Critico' ? 7 : 5,
@@ -72,10 +75,20 @@ export function OperationalMap({ segments }: Props) {
           `<div style="min-width:210px"><strong>Trecho #${segment.id}</strong><br/>KM ${segment.km_inicio} - ${segment.km_fim}<br/>Status: ${segment.classificacao}<br/>IRO: ${segment.iro}<br/>Sem manutencao: ${segment.dias_sem_manutencao} dias<br/>Prioridade: ${prioridade(segment.iro)}<br/>Recomendacao: ${segment.recomendacao_acao}</div>`
         )
         .addTo(layerRef.current!);
+
+      if (showBiomass) {
+        L.circle(point, {
+          radius: Math.max(90, biomass * 5),
+          color: biomassColor,
+          weight: 1,
+          fillColor: biomassColor,
+          fillOpacity: 0.16,
+        }).addTo(layerRef.current!);
+      }
     });
 
     if (points.length > 1) mapRef.current.fitBounds(L.latLngBounds(points), { padding: [28, 28], maxZoom: 11 });
-  }, [visibleSegments]);
+  }, [showBiomass, visibleSegments]);
 
   return (
     <section className="app-panel overflow-hidden rounded-2xl">
@@ -101,12 +114,23 @@ export function OperationalMap({ segments }: Props) {
             {item}
           </button>
         ))}
+        <button
+          type="button"
+          onClick={() => setShowBiomass((v) => !v)}
+          className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] ${
+            showBiomass ? 'border-emerald-400/50 bg-emerald-500/10 text-emerald-200' : 'border-slate-700/60 text-slate-400'
+          }`}
+        >
+          Biomassa
+        </button>
       </div>
       <div ref={mapContainerRef} className="h-[62vh] min-h-[460px] border-b border-slate-700/40 sm:min-h-[560px] xl:min-h-[720px]" />
       <div className="flex flex-wrap gap-4 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
         <Legend color="bg-emerald-400" label="Normal" />
         <Legend color="bg-amber-400" label="Atencao" />
         <Legend color="bg-red-400" label="Critico" />
+        <Legend color="bg-lime-400" label="Biomassa baixa" />
+        <Legend color="bg-orange-600" label="Biomassa media/alta" />
       </div>
     </section>
   );

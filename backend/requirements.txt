@@ -18,3 +18,5 @@ python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.20
 pytest==8.4.2
+scikit-learn==1.7.2
+joblib==1.5.2

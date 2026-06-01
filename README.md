@@ -23,7 +23,7 @@ Objetivos operacionais:
 Capacidades implementadas:
 - pipeline ETL para CSV, XLSX, KML e KMZ
 - normalizacao e persistencia em banco relacional
-- Motor ORION com IRO (0-100) e classificacao operacional
+- Motor ORION com IRO (0-100), NDVI, altura de vegetacao predita e regras regulatorias configuraveis
 - planejamento automatico de missoes por criticidade/proximidade
 - API REST com autenticacao JWT e controle por perfil
 - painel web com centro executivo, mapa, ranking e simulador
@@ -33,7 +33,7 @@ Capacidades implementadas:
 Fora do escopo atual:
 - calculo de risco por IA
 - planejamento de missao por IA
-- processamento satelital em producao
+- processamento satelital em escala produtiva
 
 ## Arquitetura
 
@@ -61,6 +61,7 @@ Backend:
 - FastAPI
 - SQLAlchemy
 - PostgreSQL
+- Scikit-Learn
 
 Dados e ETL:
 - Pandas
@@ -73,8 +74,10 @@ Dados e ETL:
 
 IRO (Indice de Risco Operacional):
 - faixa: 0 a 100
-- fatores: vegetacao, dias sem manutencao, chuva, criticidade operacional, risco contratual
+- fatores: vegetacao, dias sem manutencao, chuva, criticidade operacional, risco contratual, NDVI e altura de vegetacao predita
 - pesos configuraveis via configuracao de backend
+- para NDVI > 0.6, o score recebe acrescimo de 20% (configuravel)
+- excesso sobre limites regulatorios aumenta risco
 
 Classificacao:
 - 0-30: Normal
@@ -104,6 +107,31 @@ Base local: `http://127.0.0.1:8000`
 - `GET /api/v1/dashboard`
 - `POST /api/v1/copilot/perguntar`
 - `GET /api/v1/relatorios/{tipo}`
+- `POST /api/v1/satellite/ndvi`
+- `POST /api/v1/satellite/ndvi/stats`
+- `GET /api/v1/config/regulatory-rules`
+- `PUT /api/v1/config/regulatory-rules`
+
+## Variaveis de Ambiente Novas
+
+Backend:
+- `SENTINEL_HUB_CLIENT_ID`
+- `SENTINEL_HUB_CLIENT_SECRET`
+- `SENTINEL_HUB_TOKEN_URL` (default Sentinel Hub OAuth2)
+- `SENTINEL_STATS_URL` (default Sentinel Hub Statistics API)
+- `AI_MODEL_PATH` (default `models/vegetation_height_model.pkl`)
+- `IRO_NDVI_WEIGHT`
+- `IRO_NDVI_THRESHOLD_DENSE`
+- `IRO_NDVI_DENSE_BOOST`
+- `IRO_PREDICTED_HEIGHT_WEIGHT`
+
+Frontend:
+- `VITE_API_URL`
+
+## PWA/Offline
+
+- Service Worker em `frontend/public/sw.js` para cache de assets e rotas GET essenciais da API.
+- Fila offline no frontend para operacoes `PUT /config/regulatory-rules` e `POST /plano-semanal/gerar`, com sincronizacao automatica quando a conectividade retorna.
 
 ## Execucao Local
 
@@ -164,14 +192,19 @@ Observabilidade:
 ```text
 backend/
   app/
-    api/
-    application/
+    modules/orion/
+      domain/
+      application/
+      infrastructure/
+      interfaces/
+    api/ (compat)
+    application/ (compat)
     core/
     database/
-    domain/
-    engine/
+    domain/ (compat)
+    engine/ (compat)
     etl/
-    repositories/
+    repositories/ (compat)
   data/
   database/migrations/
   scripts/

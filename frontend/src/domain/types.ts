@@ -1,4 +1,4 @@
-﻿export interface RoadSegment {
+export interface RoadSegment {
   id: number;
   km_inicio: number;
   km_fim: number;
@@ -14,6 +14,8 @@
   chuva_acumulada_mm: number;
   criticidade_operacional: number;
   risco_contratual: number;
+  ndvi?: number | null;
+  altura_vegetacao_predita_cm?: number | null;
   iro: number;
   classificacao: 'Normal' | 'Atencao' | 'Critico';
   recomendacao_acao: string;
@@ -75,4 +77,10 @@ export interface WeeklyPlanData {
   economia_logistica_total: number;
   prioridade_maxima: string;
   recomendacoes: string[];
+}
+
+export interface RegulatoryRule {
+  key: string;
+  value: number;
+  description: string;
 }

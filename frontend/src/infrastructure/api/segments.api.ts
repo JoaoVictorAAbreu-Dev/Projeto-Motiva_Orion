@@ -1,10 +1,43 @@
-import type { ComplianceData, DashboardData, MissionPlan, RoadSegment, WeeklyPlanData } from '../../domain/types';
+import type { ComplianceData, DashboardData, MissionPlan, RegulatoryRule, RoadSegment, WeeklyPlanData } from '../../domain/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8000';
 const TOKEN_KEY = 'orion_access_token';
+const OFFLINE_QUEUE_KEY = 'orion_offline_queue';
+
+type OfflineRequest = {
+  path: string;
+  method: 'POST' | 'PUT';
+  body: unknown;
+};
 
 function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
+}
+
+function enqueueOffline(request: OfflineRequest): void {
+  const queue = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) ?? '[]') as OfflineRequest[];
+  queue.push(request);
+  localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+}
+
+export async function flushOfflineQueue(): Promise<void> {
+  if (!navigator.onLine) return;
+  const queue = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) ?? '[]') as OfflineRequest[];
+  if (!queue.length) return;
+
+  const remaining: OfflineRequest[] = [];
+  for (const item of queue) {
+    try {
+      await request(item.path, {
+        method: item.method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item.body),
+      });
+    } catch {
+      remaining.push(item);
+    }
+  }
+  localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(remaining));
 }
 
 export function clearToken(): void {
@@ -50,7 +83,33 @@ export const getSegments = () => request<RoadSegment[]>('/api/v1/trechos');
 export const getMissions = () => request<MissionPlan[]>('/api/v1/missoes');
 export const getDashboard = () => request<DashboardData>('/api/v1/dashboard');
 export const getCompliance = () => request<ComplianceData>('/api/v1/conformidade');
-export const generateWeeklyPlan = () => request<WeeklyPlanData>('/api/v1/plano-semanal/gerar', { method: 'POST' });
+export const getRegulatoryRules = () => request<RegulatoryRule[]>('/api/v1/config/regulatory-rules');
+
+export async function upsertRegulatoryRule(rule: RegulatoryRule): Promise<RegulatoryRule> {
+  if (!navigator.onLine) {
+    enqueueOffline({ path: '/api/v1/config/regulatory-rules', method: 'PUT', body: rule });
+    return rule;
+  }
+  return request<RegulatoryRule>('/api/v1/config/regulatory-rules', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(rule),
+  });
+}
+
+export async function generateWeeklyPlan(): Promise<WeeklyPlanData> {
+  if (!navigator.onLine) {
+    enqueueOffline({ path: '/api/v1/plano-semanal/gerar', method: 'POST', body: {} });
+    return {
+      total_missoes: 0,
+      custo_total_estimado: 0,
+      economia_logistica_total: 0,
+      prioridade_maxima: 'Pendente sync',
+      recomendacoes: ['Operacao offline registrada para sincronizacao.'],
+    };
+  }
+  return request<WeeklyPlanData>('/api/v1/plano-semanal/gerar', { method: 'POST' });
+}
 
 export const askCopilot = (pergunta: string) =>
   request<{ resposta: string }>('/api/v1/copilot/perguntar', {

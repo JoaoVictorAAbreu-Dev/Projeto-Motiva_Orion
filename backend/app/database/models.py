@@ -27,6 +27,8 @@ class TrechoModel(Base):
     chuva_acumulada_mm: Mapped[float] = mapped_column(Float, default=0)
     criticidade_operacional: Mapped[float] = mapped_column(Float, default=0)
     risco_contratual: Mapped[float] = mapped_column(Float, default=0)
+    ndvi: Mapped[float | None] = mapped_column(Float)
+    altura_vegetacao_predita_cm: Mapped[float | None] = mapped_column(Float)
 
     iro: Mapped[float] = mapped_column(Float, default=0)
     classificacao: Mapped[str] = mapped_column(String(16), default='Normal')
@@ -107,3 +109,13 @@ class AuditoriaModel(Base):
     evento: Mapped[str] = mapped_column(String(128), nullable=False)
     payload: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class RegulatoryRuleModel(Base):
+    __tablename__ = 'regulatory_rules'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(String(96), unique=True, nullable=False, index=True)
+    value: Mapped[float] = mapped_column(Float, nullable=False)
+    description: Mapped[str] = mapped_column(String(255), default='')
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
