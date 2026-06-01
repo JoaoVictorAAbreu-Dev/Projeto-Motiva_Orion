@@ -102,7 +102,7 @@ export function OperationalMap({ segments }: Props) {
           </button>
         ))}
       </div>
-      <div ref={mapContainerRef} className="h-[52vh] min-h-[420px] border-b border-slate-700/40 sm:min-h-[500px] xl:min-h-[620px]" />
+      <div ref={mapContainerRef} className="h-[62vh] min-h-[460px] border-b border-slate-700/40 sm:min-h-[560px] xl:min-h-[720px]" />
       <div className="flex flex-wrap gap-4 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
         <Legend color="bg-emerald-400" label="Normal" />
         <Legend color="bg-amber-400" label="Atencao" />
