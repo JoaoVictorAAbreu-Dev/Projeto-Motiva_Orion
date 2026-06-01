@@ -1,42 +1,54 @@
-﻿# Motiva ORION
+# Motiva ORION
 
-Operational Roadside Intelligence & Optimization Network
+Operational Roadside Intelligence & Optimization Network.
 
-Plataforma de inteligencia operacional para gestao preditiva da vegetacao rodoviaria da CCR Motiva, com foco em decisao, priorizacao e execucao.
+Plataforma corporativa de inteligencia operacional para gestao preditiva da vegetacao rodoviaria, com foco em decisao, conformidade e eficiencia de campo.
 
-Status: MVP operacional concluido (Sprints 1 a 5)  
-Versao: 0.3.0  
-Licenca: Proprietary  
+Status: Em evolucao controlada  
+Versao: 0.3.1  
+Licenca: Proprietary
 
-## Resumo Executivo
+## Visao de Produto
 
-O ORION consolida dados operacionais e geoespaciais, calcula risco de forma deterministica, prioriza trechos, gera missoes e disponibiliza explicacoes executivas para apoiar gestores e equipes de campo.
+O Motiva ORION transforma dados operacionais em decisoes acionaveis para concessionarias rodoviarias. O sistema consolida fontes heterogeneas, calcula risco de forma deterministica, prioriza intervencoes e gera plano semanal de missao com impacto estimado.
 
-Problema resolvido:
-- priorizacao subjetiva
-- resposta reativa
-- custo logistico elevado
-- baixa previsibilidade de conformidade contratual
+Objetivos operacionais:
+- reduzir risco viario por atraso de manutencao de vegetacao
+- reduzir custo logistico e deslocamentos
+- melhorar previsibilidade contratual
+- padronizar criterio de decisao entre equipes e turnos
 
-Resultado esperado:
-- decisao mais rapida e padronizada
-- menor custo operacional
-- maior controle de risco e conformidade
+## Escopo Atual
+
+Capacidades implementadas:
+- pipeline ETL para CSV, XLSX, KML e KMZ
+- normalizacao e persistencia em banco relacional
+- Motor ORION com IRO (0-100) e classificacao operacional
+- planejamento automatico de missoes por criticidade/proximidade
+- API REST com autenticacao JWT e controle por perfil
+- painel web com centro executivo, mapa, ranking e simulador
+- copiloto para explicacao textual dos resultados calculados
+- relatorios PDF (operacional, executivo e conformidade)
+
+Fora do escopo atual:
+- calculo de risco por IA
+- planejamento de missao por IA
+- processamento satelital em producao
 
 ## Arquitetura
 
 ```mermaid
 flowchart TD
-  A[Dados Operacionais] --> B[Pipeline ETL]
+  A[Dados operacionais e geograficos] --> B[ETL e normalizacao]
   B --> C[(PostgreSQL)]
-  C --> D[Motor ORION Deterministico]
-  D --> E[Planejamento de Missoes]
+  C --> D[Motor ORION deterministico]
+  D --> E[Planejamento de missoes]
   E --> F[API FastAPI]
-  F --> G[Frontend Centro de Operacoes]
-  F --> H[Copiloto ORION]
+  F --> G[Frontend Centro de Decisao]
+  F --> H[Copiloto de interpretacao]
 ```
 
-## Stack
+## Stack Tecnica
 
 Frontend:
 - React
@@ -50,81 +62,35 @@ Backend:
 - SQLAlchemy
 - PostgreSQL
 
-ETL e geodados:
+Dados e ETL:
 - Pandas
 - GeoPandas
 - OpenPyXL
 - Shapely
 - FastKML
 
-## Funcionalidades Principais
-
-1. Data Foundation:
-- importacao de CSV, XLSX, KML e KMZ
-- normalizacao para modelo unico
-
-2. Motor ORION:
-- IRO (0 a 100) deterministico
-- classificacao: Normal, Atencao, Critico
-- recomendacao por trecho (acao, prazo, metodo)
-
-3. Planejamento Operacional:
-- agrupamento de trechos
-- missao com prioridade, equipe, tempo e custo
-- geracao de plano semanal
-
-4. Centro de Operacoes:
-- painel executivo
-- simulador de cenarios
-- mapa operacional
-- ranking e detalhe de trecho
-- copiloto explicativo
-
-5. Conformidade e relatorios:
-- painel de conformidade
-- relatorios PDF operacional, executivo e conformidade
-
 ## Regras de Negocio
 
-IRO:
-- escala de 0 a 100
-- pesos configuraveis para vegetacao, dias sem manutencao, chuva, criticidade operacional e risco contratual
+IRO (Indice de Risco Operacional):
+- faixa: 0 a 100
+- fatores: vegetacao, dias sem manutencao, chuva, criticidade operacional, risco contratual
+- pesos configuraveis via configuracao de backend
 
-Criticidade:
+Classificacao:
 - 0-30: Normal
 - 31-60: Atencao
 - 61-100: Critico
 
 Governanca de IA:
-- IA nao calcula IRO, risco, prioridade ou missao
-- IA apenas interpreta resultados calculados no backend
+- IA nao calcula risco, score, prioridade ou missao
+- IA apenas interpreta resultados do backend
 
-## Modelo de Dados (Essencial)
+## API Principal
 
-Trecho:
-- id, km_inicio, km_fim, sentido, lado, tipo_area, status
-- latitude, longitude, geom
-- nivel_rocada, dias_sem_manutencao, chuva_acumulada_mm
-- criticidade_operacional, risco_contratual, iro, classificacao
-- recomendacao_acao, recomendacao_prazo_dias, recomendacao_metodo
-
-Missao:
-- id, codigo, prioridade, equipe, tempo_estimado_h, custo_estimado
-- economia_logistica_estimada, trecho_ids, plano_semanal_ref
-
-Indicador:
-- total_trechos, trechos_criticos, indice_medio_iro, economia_potencial
-
-Usuario:
-- nome, email, perfil, ativo
-
-## Endpoints Principais
-
-Base: `http://127.0.0.1:8000`
+Base local: `http://127.0.0.1:8000`
 
 - `GET /health`
 - `POST /api/v1/auth/login`
-- `POST /api/v1/auth/login-json`
 - `GET /api/v1/auth/me`
 - `POST /api/v1/bootstrap`
 - `POST /api/v1/imports/gestao-verde`
@@ -164,20 +130,26 @@ npm install
 npm run dev
 ```
 
-## Credenciais Locais
+Checklist de demonstracao:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\demo-smoke.ps1
+```
+
+## Credenciais Locais de Desenvolvimento
 
 - `admin@motiva-orion.local` / `orion123`
 - `gestor@motiva-orion.local` / `orion123`
 - `operador@motiva-orion.local` / `orion123`
 
 Observacao:
-- no ambiente local atual, o fallback de autenticacao por `auth_default_password` pode estar ativo.
+- credenciais acima sao exclusivas para ambiente local de desenvolvimento
 
-## Observabilidade e Seguranca
+## Seguranca e Observabilidade
 
 Seguranca:
 - autenticacao JWT
 - autorizacao por perfil (`admin`, `gestor`, `coordenador`, `operador`)
+- trilha de separacao entre calculo deterministico e camada de IA
 
 Observabilidade:
 - `request_id` por requisicao
@@ -187,7 +159,7 @@ Observabilidade:
   - `orion_http_request_latency_seconds`
   - `orion_http_errors_total`
 
-## Estrutura do Projeto
+## Estrutura do Repositorio
 
 ```text
 backend/
@@ -201,19 +173,23 @@ backend/
     etl/
     repositories/
   data/
-  database/
-    migrations/
+  database/migrations/
   scripts/
 frontend/
   src/
+docs/
+scripts/
 ```
 
-## Limitacoes Atuais
+## Roadmap Tecnico
 
-- integracoes satelitais (Sentinel/Copernicus) ainda nao ativadas em producao
-- OpenRouteService ainda em preparacao arquitetural
+Proximas entregas recomendadas:
+- ativacao controlada de integracao satelital
+- enriquecimento logistico com OpenRouteService em modo produtivo
+- hardening de autenticao para ambiente corporativo
+- cobertura adicional de testes de integracao
 
-## Referencias Internas
+## Referencias
 
-- Plano de sprints: `docs/sprints/SPRINTS.md`
-- Backlog Sprint 1: `docs/sprints/sprint-01-backlog.md`
+- `docs/sprints/SPRINTS.md`
+- `docs/sprints/sprint-01-backlog.md`
