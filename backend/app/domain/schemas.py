@@ -94,3 +94,12 @@ class CopilotAskRequest(BaseModel):
 
 class CopilotAskResponse(BaseModel):
     resposta: str
+
+
+class SentinelNDVIRequest(BaseModel):
+    bbox: list[float]
+    date_from: str
+    date_to: str
+    width: int = 512
+    height: int = 512
+    max_cloud_coverage: int = 30

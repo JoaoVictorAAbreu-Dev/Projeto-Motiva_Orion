@@ -1,16 +1,19 @@
 ﻿from datetime import datetime
 from pathlib import Path
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
+from app.application.services.ai_service import AIService
 from app.application.services.operational_bootstrap_service import OperationalBootstrapService
 from app.application.services.operational_plan_service import OperationalPlanService
 from app.application.services.report_service import build_report_pdf
-from app.application.services.ai_service import AIService
+from app.application.services.sentinel_service import SentinelService
 from app.core.auth import Token, authenticate_user, create_access_token, get_current_user, require_roles
+from app.core.settings import settings
 from app.database.models import UsuarioModel
 from app.database.session import get_db
 from app.domain.schemas import (
@@ -22,11 +25,20 @@ from app.domain.schemas import (
     LoginRequest,
     MissaoRead,
     PlanoSemanalRead,
+    SentinelNDVIRequest,
     TrechoRead,
 )
 from app.repositories.core_repositories import IndicadorRepository, IntervencaoRepository, MissaoRepository, TrechoRepository
 
 router = APIRouter(prefix='/api/v1', tags=['orion'])
+
+
+def get_bootstrap_service(db: Session) -> OperationalBootstrapService:
+    return OperationalBootstrapService(db)
+
+
+def get_sentinel_service() -> SentinelService:
+    return SentinelService()
 
 
 @router.post('/auth/login', response_model=Token)
@@ -57,7 +69,7 @@ async def bootstrap_data(
     db: Session = Depends(get_db),
     _: UsuarioModel = Depends(require_roles('admin', 'gestor'))
 ) -> dict:
-    service = OperationalBootstrapService(db)
+    service = get_bootstrap_service(db)
     raw_dir = Path(__file__).resolve().parents[3] / 'data' / 'raw'
     return await service.load_from_raw(raw_dir)
 
@@ -67,11 +79,9 @@ async def import_gestao_verde(
     db: Session = Depends(get_db),
     _: UsuarioModel = Depends(require_roles('admin', 'gestor'))
 ) -> dict:
-    service = OperationalBootstrapService(db)
-    default_paths = [
-        Path(r'C:\Users\jv921\Downloads\Arquivos - Dados challenge MOTIVA\02. Dados Gestão verde - Atual\Retigrafico\RA-RET-ROÇ-LIMP-2026-03-13.xlsx'),
-        Path(r'C:\Users\jv921\Downloads\Arquivos - Dados challenge MOTIVA\02. Dados Gestão verde - Atual\Retigrafico\RA-RET-ROÇ-LIMP-2026-03-20.xlsx')
-    ]
+    service = get_bootstrap_service(db)
+    base_dir = Path(settings.gestao_verde_import_dir)
+    default_paths = list(base_dir.rglob('*.xlsx')) if base_dir.exists() else []
     return await service.load_from_paths(default_paths)
 
 
@@ -206,3 +216,37 @@ async def ask_copilot(
     }
     resposta = await AIService().explain(payload.pergunta, context)
     return CopilotAskResponse(resposta=resposta)
+
+
+@router.post('/satellite/ndvi')
+async def satellite_ndvi(
+    payload: SentinelNDVIRequest,
+    _: UsuarioModel = Depends(require_roles('admin', 'gestor', 'coordenador')),
+    service: SentinelService = Depends(get_sentinel_service),
+) -> Response:
+    if len(payload.bbox) != 4:
+        raise HTTPException(status_code=400, detail='bbox must have 4 numeric values')
+    if payload.width <= 0 or payload.height <= 0:
+        raise HTTPException(status_code=400, detail='width and height must be positive')
+    if payload.max_cloud_coverage < 0 or payload.max_cloud_coverage > 100:
+        raise HTTPException(status_code=400, detail='max_cloud_coverage must be between 0 and 100')
+
+    try:
+        result = await service.fetch_ndvi_image(
+            bbox=payload.bbox,
+            date_from=payload.date_from,
+            date_to=payload.date_to,
+            width=payload.width,
+            height=payload.height,
+            max_cloud=payload.max_cloud_coverage,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail='Sentinel request failed') from exc
+
+    return Response(
+        content=result.content,
+        media_type=result.mime_type,
+        headers={'X-Sentinel-Cache': 'HIT' if result.cached else 'MISS'},
+    )

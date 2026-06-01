@@ -24,5 +24,20 @@ class Settings(BaseSettings):
     groq_api_key: str | None = None
     groq_model: str = 'llama-3.3-70b-versatile'
 
+    openrouteservice_api_key: str | None = None
+    openrouteservice_enabled: bool = False
+    openrouteservice_max_calls_per_run: int = 10
+    openrouteservice_timeout_seconds: float = 8.0
+
+    sentinel_enabled: bool = False
+    sentinel_process_url: str = 'https://sh.dataspace.copernicus.eu/process/v1'
+    sentinel_access_token: str | None = None
+    sentinel_client_id: str | None = None
+    sentinel_client_secret: str | None = None
+    sentinel_token_url: str = 'https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token'
+    sentinel_max_calls_per_run: int = 5
+    sentinel_timeout_seconds: float = 20.0
+    gestao_verde_import_dir: str = r'C:\Users\jv921\Downloads\Arquivos - Dados challenge MOTIVA'
+
 
 settings = Settings()

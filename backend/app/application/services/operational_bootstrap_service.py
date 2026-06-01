@@ -3,6 +3,7 @@
 from sqlalchemy.orm import Session
 
 from app.application.services.etl_pipeline_service import ETLPipelineService
+from app.application.services.route_service import OpenRouteService
 from app.database.models import IndicadorModel
 from app.engine.mission_planning_engine import MissionPlanningEngine
 from app.repositories.core_repositories import IndicadorRepository, MissaoRepository, TrechoRepository
@@ -12,7 +13,7 @@ class OperationalBootstrapService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.etl = ETLPipelineService()
-        self.mission_engine = MissionPlanningEngine()
+        self.mission_engine = MissionPlanningEngine(route_service=OpenRouteService())
 
     async def _persist(self, files: list[Path]) -> dict:
         trechos = await self.etl.import_files(files)
