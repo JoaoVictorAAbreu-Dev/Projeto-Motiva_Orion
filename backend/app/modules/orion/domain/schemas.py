@@ -125,3 +125,10 @@ class RegulatoryRuleUpsert(BaseModel):
     value: float
     description: str = ''
 
+
+class DemoDatasetSummary(BaseModel):
+    total_trechos: int
+    total_missoes: int
+    indice_medio_iro: float
+    trechos_criticos: int
+

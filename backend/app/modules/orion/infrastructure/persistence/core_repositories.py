@@ -16,7 +16,7 @@ class TrechoRepository:
     def list_criticos(self) -> List[TrechoModel]:
         return list(
             self.db.execute(
-                select(TrechoModel).where(TrechoModel.classificacao == 'Critico').order_by(TrechoModel.iro.desc())
+                select(TrechoModel).where(TrechoModel.classificacao.in_(['Critico', 'Alto'])).order_by(TrechoModel.iro.desc())
             ).scalars().all()
         )
 

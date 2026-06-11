@@ -17,7 +17,7 @@ export interface RoadSegment {
   ndvi?: number | null;
   altura_vegetacao_predita_cm?: number | null;
   iro: number;
-  classificacao: 'Normal' | 'Atencao' | 'Critico';
+  classificacao: string;
   recomendacao_acao: string;
   recomendacao_prazo_dias: number;
   recomendacao_metodo: string;
@@ -83,4 +83,11 @@ export interface RegulatoryRule {
   key: string;
   value: number;
   description: string;
+}
+
+export interface DemoDatasetSummary {
+  total_trechos: number;
+  total_missoes: number;
+  indice_medio_iro: number;
+  trechos_criticos: number;
 }

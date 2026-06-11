@@ -1,4 +1,4 @@
-import type { ComplianceData, DashboardData, MissionPlan, RegulatoryRule, RoadSegment, WeeklyPlanData } from '../../domain/types';
+import type { ComplianceData, DashboardData, DemoDatasetSummary, MissionPlan, RegulatoryRule, RoadSegment, WeeklyPlanData } from '../../domain/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8000';
 const TOKEN_KEY = 'orion_access_token';
@@ -84,6 +84,8 @@ export const getMissions = () => request<MissionPlan[]>('/api/v1/missoes');
 export const getDashboard = () => request<DashboardData>('/api/v1/dashboard');
 export const getCompliance = () => request<ComplianceData>('/api/v1/conformidade');
 export const getRegulatoryRules = () => request<RegulatoryRule[]>('/api/v1/config/regulatory-rules');
+export const generateDemoDataset = () => request<DemoDatasetSummary>('/api/v1/demo/simulados', { method: 'POST' });
+export const resetDemoDataset = () => request<DemoDatasetSummary>('/api/v1/demo/reset', { method: 'POST' });
 
 export async function upsertRegulatoryRule(rule: RegulatoryRule): Promise<RegulatoryRule> {
   if (!navigator.onLine) {

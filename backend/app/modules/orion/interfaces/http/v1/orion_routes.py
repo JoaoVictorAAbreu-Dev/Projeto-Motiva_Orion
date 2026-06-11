@@ -8,19 +8,21 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.modules.orion.application.services.ai_service import AIService
+from app.modules.orion.application.services.demo_service import build_indicador, build_demo_missoes, build_demo_trechos
 from app.modules.orion.application.services.operational_bootstrap_service import OperationalBootstrapService
 from app.modules.orion.application.services.operational_plan_service import OperationalPlanService
 from app.modules.orion.application.services.report_service import build_report_pdf
 from app.modules.orion.application.services.sentinel_service import SentinelService
 from app.core.auth import Token, authenticate_user, create_access_token, get_current_user, require_roles
 from app.core.settings import settings
-from app.database.models import UsuarioModel
+from app.database.models import IndicadorModel, MissaoModel, TrechoModel, UsuarioModel
 from app.database.session import get_db
 from app.modules.orion.domain.schemas import (
     ConformidadeRead,
     CopilotAskRequest,
     CopilotAskResponse,
     DashboardRead,
+    DemoDatasetSummary,
     IndicadorRead,
     LoginRequest,
     MissaoRead,
@@ -45,6 +47,28 @@ def get_sentinel_service() -> SentinelService:
 
 def get_sentinel_satellite_service() -> SentinelSatelliteService:
     return SentinelSatelliteService()
+
+
+def refresh_demo_data(db: Session) -> DemoDatasetSummary:
+    db.query(MissaoModel).delete()
+    db.query(IndicadorModel).delete()
+    db.query(TrechoModel).delete()
+
+    trechos = build_demo_trechos()
+    missoes = build_demo_missoes(trechos)
+    indicador = build_indicador(trechos)
+
+    db.add_all(trechos)
+    db.add_all(missoes)
+    db.add(indicador)
+    db.commit()
+
+    return DemoDatasetSummary(
+        total_trechos=len(trechos),
+        total_missoes=len(missoes),
+        indice_medio_iro=indicador.indice_medio_iro,
+        trechos_criticos=len([t for t in trechos if t.iro >= 70]),
+    )
 
 
 @router.post('/auth/login', response_model=Token)
@@ -78,6 +102,22 @@ async def bootstrap_data(
     service = get_bootstrap_service(db)
     raw_dir = Path(__file__).resolve().parents[6] / 'data' / 'raw'
     return await service.load_from_raw(raw_dir)
+
+
+@router.post('/demo/simulados', response_model=DemoDatasetSummary)
+def generate_demo_dataset(
+    db: Session = Depends(get_db),
+    _: UsuarioModel = Depends(require_roles('admin', 'gestor', 'coordenador'))
+) -> DemoDatasetSummary:
+    return refresh_demo_data(db)
+
+
+@router.post('/demo/reset', response_model=DemoDatasetSummary)
+def reset_demo_dataset(
+    db: Session = Depends(get_db),
+    _: UsuarioModel = Depends(require_roles('admin', 'gestor', 'coordenador'))
+) -> DemoDatasetSummary:
+    return refresh_demo_data(db)
 
 
 @router.post('/imports/gestao-verde')
@@ -135,7 +175,7 @@ def conformidade(db: Session = Depends(get_db), _: UsuarioModel = Depends(get_cu
     intervencoes = IntervencaoRepository(db).count()
 
     total = len(trechos)
-    risco = len([t for t in trechos if t.risco_contratual >= 70 or t.classificacao == 'Critico'])
+    risco = len([t for t in trechos if t.risco_contratual >= 70 or t.classificacao.lower() in {'critico', 'alto'}])
     conformidade_geral = round(max(0.0, 100 - ((risco / total) * 100)), 1) if total else 0.0
     prazo_medio = round(sum(max(1, t.recomendacao_prazo_dias) for t in trechos) / total, 1) if total else 0.0
 
@@ -153,7 +193,7 @@ def dashboard(db: Session = Depends(get_db), _: UsuarioModel = Depends(get_curre
     missoes = MissaoRepository(db).list()
 
     total = len(trechos)
-    criticos = len([t for t in trechos if t.classificacao == 'Critico'])
+    criticos = len([t for t in trechos if t.classificacao.lower() in {'critico', 'alto'}])
     indice_medio = round(sum(t.iro for t in trechos) / total, 1) if total else 0.0
     economia = round(sum(m.economia_logistica_estimada for m in missoes), 2)
     conformidade_contratual = round(max(0.0, 100 - ((criticos / total) * 100)), 1) if total else 0.0
@@ -207,7 +247,7 @@ async def ask_copilot(
 ) -> CopilotAskResponse:
     trechos = TrechoRepository(db).list()
     missoes = MissaoRepository(db).list()
-    criticos = [t for t in trechos if t.classificacao == 'Critico']
+    criticos = [t for t in trechos if t.classificacao.lower() in {'critico', 'alto'}]
     custo_total = float(sum(m.custo_estimado for m in missoes))
     dashboard = {
         'total_trechos': len(trechos),

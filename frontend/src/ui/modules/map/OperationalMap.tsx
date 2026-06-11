@@ -9,13 +9,14 @@ interface Props {
   segments: RoadSegment[];
 }
 
-type StatusFilter = 'Todos' | RoadSegment['classificacao'];
+type StatusFilter = 'Todos' | 'Alto' | 'Medio' | 'Baixo';
 
-const filters: StatusFilter[] = ['Todos', 'Critico', 'Atencao', 'Normal'];
+const filters: StatusFilter[] = ['Todos', 'Alto', 'Medio', 'Baixo'];
 
 const getColor = (classificacao: string) => {
-  if (classificacao === 'Critico') return '#ef4444';
-  if (classificacao === 'Atencao') return '#f59e0b';
+  const value = classificacao.toLowerCase();
+  if (value.includes('alto') || value.includes('crit')) return '#ef4444';
+  if (value.includes('medio') || value.includes('atenc')) return '#f59e0b';
   return '#22c55e';
 };
 
@@ -28,7 +29,15 @@ export function OperationalMap({ segments }: Props) {
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
   const visibleSegments = useMemo(
-    () => (filter === 'Todos' ? segments : segments.filter((segment) => segment.classificacao === filter)),
+    () =>
+      filter === 'Todos'
+        ? segments
+        : segments.filter((segment) => {
+            const value = segment.classificacao.toLowerCase();
+            if (filter === 'Alto') return value.includes('alto') || value.includes('crit');
+            if (filter === 'Medio') return value.includes('medio') || value.includes('atenc');
+            return value.includes('baixo') || value.includes('normal');
+          }),
     [filter, segments]
   );
 
@@ -65,7 +74,7 @@ export function OperationalMap({ segments }: Props) {
       const biomassColor = biomass >= 80 ? '#7f1d1d' : biomass >= 60 ? '#b45309' : biomass >= 40 ? '#65a30d' : '#16a34a';
 
       L.circleMarker(point, {
-        radius: segment.classificacao === 'Critico' ? 7 : 5,
+        radius: segment.classificacao.toLowerCase().includes('alto') || segment.classificacao.toLowerCase().includes('crit') ? 7 : 5,
         color,
         weight: 2,
         fillColor: color,
@@ -126,9 +135,9 @@ export function OperationalMap({ segments }: Props) {
       </div>
       <div ref={mapContainerRef} className="h-[62vh] min-h-[460px] border-b border-slate-700/40 sm:min-h-[560px] xl:min-h-[720px]" />
       <div className="flex flex-wrap gap-4 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-        <Legend color="bg-emerald-400" label="Normal" />
-        <Legend color="bg-amber-400" label="Atencao" />
-        <Legend color="bg-red-400" label="Critico" />
+        <Legend color="bg-emerald-400" label="Baixo" />
+        <Legend color="bg-amber-400" label="Medio" />
+        <Legend color="bg-red-400" label="Alto" />
         <Legend color="bg-lime-400" label="Biomassa baixa" />
         <Legend color="bg-orange-600" label="Biomassa media/alta" />
       </div>

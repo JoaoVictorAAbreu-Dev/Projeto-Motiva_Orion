@@ -8,8 +8,9 @@ interface Props {
 }
 
 const tone = (classification: string) => {
-  if (classification === 'Critico') return 'critical';
-  if (classification === 'Atencao') return 'warning';
+  const value = classification.toLowerCase();
+  if (value.includes('alto') || value.includes('crit')) return 'critical';
+  if (value.includes('medio') || value.includes('atenc')) return 'warning';
   return 'success';
 };
 
